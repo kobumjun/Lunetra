@@ -1,10 +1,14 @@
 import { PublicShell } from "@/components/common/public-shell";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { SectionHeader } from "@/components/common/section-header";
+import type { Database } from "@/types/database";
+
+type SiteSettingsRow = Database["public"]["Tables"]["site_settings"]["Row"];
 
 export default async function AboutPage() {
   const supabase = await createServerSupabase();
-  const { data: settings } = await supabase.from("site_settings").select("*").limit(1).maybeSingle();
+  const { data } = await supabase.from("site_settings").select("*").limit(1).maybeSingle();
+  const settings: SiteSettingsRow | null = data;
   return (
     <PublicShell footer={settings ?? undefined}>
       <SectionHeader eyebrow="About Us" title={settings?.company_name ?? "Lunetra Entertainment Network"} description={settings?.about_summary ?? ""} />
