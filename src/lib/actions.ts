@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { auditionApplicationSchema, bannerSchema } from "@/lib/validations/forms";
+import type { Database } from "@/types/database";
+
+type ContentTable = "challenges" | "auditions" | "magazines";
+type ContentInsert = Database["public"]["Tables"][ContentTable]["Insert"];
+type ContentUpdate = Database["public"]["Tables"][ContentTable]["Update"];
 
 export async function adminLogin(_: unknown, formData: FormData) {
   const email = String(formData.get("email") ?? "");
@@ -56,12 +61,14 @@ export async function upsertContent(table: "challenges" | "auditions" | "magazin
   await requireAdmin();
   const supabase = await createServerSupabase();
   const id = String(formData.get("id") ?? "");
-  const payload = Object.fromEntries(formData.entries());
-  delete payload.id;
+  const all = Object.fromEntries(formData.entries()) as Record<string, FormDataEntryValue>;
+  const { id: _omitId, ...rest } = all;
+  const payloadInsert = rest as unknown as ContentInsert;
+  const payloadUpdate = rest as unknown as ContentUpdate;
 
   const { error } = id
-    ? await supabase.from(table).update(payload).eq("id", id)
-    : await supabase.from(table).insert(payload);
+    ? await supabase.from(table).update(payloadUpdate).eq("id", id)
+    : await supabase.from(table).insert(payloadInsert);
   if (error) return { ok: false, message: error.message };
   revalidatePath(`/${table}`);
   revalidatePath(`/admin/${table}`);
